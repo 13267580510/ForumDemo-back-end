@@ -2,13 +2,6 @@ const mongodb =  require('../Mongoose');
 const mongoose = require("../Mongoose");
 
 const IssueSchema = new mongodb.Schema({
-        //不需要设置id字段，因为MongoDB默认生成一个_id字段
-        // id:{
-        //   type:String,
-        //   unique: true,
-        //   required:true,
-        //
-        // },
         title:{
             type:String,
             required:true
@@ -32,6 +25,11 @@ const IssueSchema = new mongodb.Schema({
         updateTime:{
             type:Date,
             default:Date.now
+        },
+        UID:{
+            type:Number,
+            ref:'User',
+            required:true
         }
 });
 

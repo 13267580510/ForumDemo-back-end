@@ -7,6 +7,11 @@ const bcrypt = require('bcrypt')
 router.post('/login',async (req,res,next)=>{
   //先从数据库中查找该用户数据
   const user = await User.findOne({ username:req.body.UserName});
+  //判断是否有该用户
+  if(user==null){
+    res.send('不存在该用户');
+    return ;
+  }
   console.log(user);
   //用户发过来的密码
   const password_1=req.body.Password;
@@ -56,7 +61,7 @@ router.post('/UpdateStatus',async (req,res,next)=>{
       console.log('UpdateStatus:',req.body);
       const UID = req.body.UID;
       const ifStatus = req.body.status;
-      User.findOneAndUpdate(
+      await User.findOneAndUpdate(
           {UID:UID},//查询条件
           {status:ifStatus},
           {new:true}

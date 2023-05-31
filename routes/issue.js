@@ -32,9 +32,56 @@ router.post('/getIssue',async (req,res)=> {
             {content: {$regex: keyword, $options: 'i'}}, // 匹配内容字段
         ]
     })
-    console.log(issue);
+    res.send(issue);
+})
+//获取所有问题
+router.get('/getIssueInfo',async (req,res)=> {
+    console.log("接收到获取所有问题请求");
+    const issue  = await Issue.find();
+    console.log(issue)
     res.send(issue);
 })
 //删除问题
+router.post('/deleteIssue',async (req,res)=>{
+    console.log("接收到删除问题请求",req.body);
+    // 构造搜索条件
+    const filter = { _id: req.body._id };
 
+    // 执行删除操作
+    const result = await Issue.findOneAndDelete(filter);
+    console.log(result);
+
+})
+//修改问题
+router.post('/updateIssue',async (req,res)=>{
+    //调取需要修改的问题具体信息
+    const IssueID=req.body._id;
+    const issue = await Issue.findOne({
+        _id:IssueID
+    })
+
+    //判断有无这个问题
+    if(issue){
+        //判断是否为原作者
+        if(issue.UID==IssueID){
+            Issue.findOneAndUpdate(
+                {_id:IssueID},
+                {
+                    title:req.body.title,
+                    content:req.body.content,
+                    category:req.body.category
+                },
+                {new:true}
+            ).then(result=>{
+                res.send(result);
+            }).catch(err=>{
+                console.log(err);
+            })
+        }
+    }else {
+        res.send('无权修改')
+    }
+
+
+})
 module.exports = router;
