@@ -11,7 +11,6 @@ const IssueSchema = new mongodb.Schema({
         // },
         title:{
             type:String,
-            unique:true,
             required:true
         },
         content:{

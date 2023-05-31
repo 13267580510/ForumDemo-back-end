@@ -6,9 +6,10 @@ const { Issue } = require('../API/Model/Issue');
 router.post('/addIssue',async (req,res)=>{
     console.log('新增问题请求');
     console.log('req:',req.body.username);
+
     const issue = await  Issue.create({
         title:req.body.title,
-        content:req.body.title,
+        content:req.body.content,
         category:req.body.category,
         author:req.body.author,
         createTime:req.body.createTime,
@@ -18,9 +19,22 @@ router.post('/addIssue',async (req,res)=>{
         res.send(success);
     }).catch((err)=>{
         console.log('新增问题失败',err);
+        res.send(err)
     })
 })
-
+//查找问题
+router.post('/getIssue',async (req,res)=> {
+    console.log("接收到查询问题请求",req.body.keyword);
+    const keyword = req.body.keyword;
+    const issue = await Issue.find({
+        $or: [
+            {title: {$regex: keyword, $options: 'i'}}, // 匹配标题字段
+            {content: {$regex: keyword, $options: 'i'}}, // 匹配内容字段
+        ]
+    })
+    console.log(issue);
+    res.send(issue);
+})
 //删除问题
 
 module.exports = router;
