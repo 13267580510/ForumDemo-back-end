@@ -13,7 +13,8 @@ router.post('/addIssue',async (req,res)=>{
         category:req.body.category,
         author:req.body.author,
         createTime:req.body.createTime,
-        updateTime:req.body.updateTime
+        updateTime:req.body.updateTime,
+        UID:req.body.UID
     }).then((success)=>{
         console.log('新增问题成功');
         res.send(success);
@@ -54,6 +55,7 @@ router.post('/deleteIssue',async (req,res)=>{
 })
 //修改问题
 router.post('/updateIssue',async (req,res)=>{
+    console.log('接收到修改问题请求，以下是新的问题信息:',req.body);
     //调取需要修改的问题具体信息
     const IssueID=req.body._id;
     const issue = await Issue.findOne({
@@ -62,17 +64,21 @@ router.post('/updateIssue',async (req,res)=>{
 
     //判断有无这个问题
     if(issue){
+        console.log("开始权限判断");
         //判断是否为原作者
-        if(issue.UID==IssueID){
+        if(issue.UID==req.body.UID){
+            console.log('权限核对完成，开始修改信息');
             Issue.findOneAndUpdate(
                 {_id:IssueID},
                 {
                     title:req.body.title,
                     content:req.body.content,
-                    category:req.body.category
+                    category:req.body.category,
+                    updateTime:Date.now()
                 },
                 {new:true}
             ).then(result=>{
+                console.log('问题修改完成');
                 res.send(result);
             }).catch(err=>{
                 console.log(err);
