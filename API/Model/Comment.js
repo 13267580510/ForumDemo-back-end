@@ -1,9 +1,10 @@
-const mongoose = require('../Mongoose');
+const mongodb =  require('../Mongoose');
+const mongoose = require("../Mongoose");
 
 
-const CommentSchema = new mongoose.Schema({
+const CommentSchema = new mongodb.Schema({
     issueID:{
-        type:mongoose.Schema.Types.ObjectId,
+        type:mongodb.Schema.Types.ObjectId,
         ref:'Issue'
     },
     content: {
@@ -19,7 +20,7 @@ const CommentSchema = new mongoose.Schema({
         required:true,
         ref:'User'
     },
-    //评论的回复，就是子评论
+    //评论的回复，子评论
     replies: [
         {
             content: {
@@ -27,7 +28,7 @@ const CommentSchema = new mongoose.Schema({
                 required: true
             },
             author: {
-                type: Number,
+                type: String,
                 ref: 'User',
                 required: true
             },
@@ -35,11 +36,30 @@ const CommentSchema = new mongoose.Schema({
                 type:Number,
                 required:true,
                 ref:'User'
+            },
+            replyTo:{
+                type:Number,
+                required:true
             }
         },
     ],
+    likes:{
+        type:Number,
+        default:0,
+        required:true
+    },
+    dislikes:{
+        type:Number,
+        default:0,
+        required:true
+    },
+    createTime: {
+        type: Date,
+        default:Date.now()
+        }
+
 })
 
-const {Comment} = mongoose.model('Comment', CommentSchema);
+const Comment = mongoose.model('Comment', CommentSchema);
 
 module.exports = {Comment};

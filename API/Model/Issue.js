@@ -2,6 +2,7 @@ const mongodb =  require('../Mongoose');
 const mongoose = require("../Mongoose");
 
 const IssueSchema = new mongodb.Schema({
+    //主键采用默认的_id
         title:{
             type:String,
             required:true

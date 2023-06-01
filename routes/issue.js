@@ -25,15 +25,23 @@ router.post('/addIssue',async (req,res)=>{
 })
 //查找问题
 router.post('/getIssue',async (req,res)=> {
-    console.log("接收到查询问题请求",req.body.keyword);
-    const keyword = req.body.keyword;
-    const issue = await Issue.find({
-        $or: [
-            {title: {$regex: keyword, $options: 'i'}}, // 匹配标题字段
-            {content: {$regex: keyword, $options: 'i'}}, // 匹配内容字段
-        ]
-    })
-    res.send(issue);
+    console.log("接收到查询问题请求",req.body);
+    //判断是根据关键字查找问题，还是根据问题_id来查找
+    if(req.body._id){
+        console.log('开始根据问题_id查找');
+        const issue = await  Issue.findOne({_id:req.body._id});
+        res.send(issue);
+    }
+    if(req.body.keyword){
+        const keyword = req.body.keyword;
+        const issue = await Issue.find({
+            $or: [
+                {title: {$regex: keyword, $options: 'i'}}, // 匹配标题字段
+                {content: {$regex: keyword, $options: 'i'}}, // 匹配内容字段
+            ]
+        })
+        res.send(issue);
+    }
 })
 //获取所有问题
 router.get('/getIssueInfo',async (req,res)=> {
@@ -83,9 +91,11 @@ router.post('/updateIssue',async (req,res)=>{
             }).catch(err=>{
                 console.log(err);
             })
+        }else{
+            res.send('无权修改');
         }
     }else {
-        res.send('无权修改')
+        res.send('找不到该问题')
     }
 
 
