@@ -1,6 +1,7 @@
 // 引入mongodb
 const mongoose = require('../Mongoose')
 const bcrypt = require('bcrypt')
+const moment = require("moment-timezone");
 // 建立用户表
 const UserSchema = new mongoose.Schema({
     satoken:{
@@ -48,12 +49,12 @@ const UserSchema = new mongoose.Schema({
     },
     createTime: {
         type: Date,
-        default: Date.now,
+        default: () => moment().tz('Asia/Shanghai').format(),
         required:true
     },
     updateTime: {
         type: Date,
-        default: Date.now,
+        default: () => moment().tz('Asia/Shanghai').format(),
         required:true
     }
 })

@@ -1,5 +1,6 @@
 const mongodb =  require('../Mongoose');
 const mongoose = require("../Mongoose");
+const moment = require("moment-timezone");
 
 const IssueSchema = new mongodb.Schema({
     //主键采用默认的_id
@@ -21,11 +22,11 @@ const IssueSchema = new mongodb.Schema({
         },
         createTime:{
             type:Date,
-            default:Date.now
+            default:() => moment().tz('Asia/Shanghai').format()
         },
         updateTime:{
             type:Date,
-            default:Date.now
+            default:() => moment().tz('Asia/Shanghai').format()
         },
         UID:{
             type:Number,

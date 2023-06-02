@@ -1,5 +1,6 @@
 const mongodb =  require('../Mongoose');
 const mongoose = require("../Mongoose");
+const moment = require('moment-timezone');
 
 
 const CommentSchema = new mongodb.Schema({
@@ -55,7 +56,7 @@ const CommentSchema = new mongodb.Schema({
     },
     createTime: {
         type: Date,
-        default:Date.now()
+        default:() => moment().tz('Asia/Shanghai').format()
         }
 
 })
