@@ -39,9 +39,29 @@ const CommentSchema = new mongodb.Schema({
                 ref:'User'
             },
             replyTo:{
+                type:mongodb.Schema.Types.ObjectId,
+                ref:'User',
+                default:null
+            },
+            replyToIndex:{
                 type:Number,
+                default:null
+            },
+            likes:{
+                type:Number,
+                default:0,
                 required:true
+            },
+            dislikes:{
+                type:Number,
+                default:0,
+                required:true
+            },
+            createTime: {
+                type: Date,
+                default:() => moment().tz('Asia/Shanghai').format()
             }
+
         },
     ],
     likes:{
