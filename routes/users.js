@@ -6,53 +6,56 @@ const bcrypt = require('bcrypt')
 //用户登录
 router.post('/login',async (req,res,next)=>{
   //先从数据库中查找该用户数据
-  const user = await User.findOne({ username:req.body.UserName});
+  console.log('接收到登录请求:',req.body);
+  const user = await User.findOne({ username:req.body.username});
   //判断是否有该用户
   if(user==null){
     res.send('不存在该用户');
     return ;
-  }
-  console.log(user);
-  //用户发过来的密码
-  const password_1=req.body.Password;
-  //数据库中的密码
-  const password_2=user.password;
-  try {
-    bcrypt.compare(password_1,password_2,(err,result)=>{
-      if (err) {
-        // 处理错误
-        console.error(err);
-        return;
-      }
+  }else{
+    console.log(user);
+    //用户发过来的密码
+    const password_1=req.body.password;
+    //数据库中的密码
+    const password_2=user.password;
+    try {
+      bcrypt.compare(password_1,password_2,(err,result)=>{
+        if (err) {
+          // 处理错误
+          console.error(err);
+          return;
+        }
 
-      if (result) {
-        // 密码匹配
-        console.log('密码匹配');
-        res.send({
-          code:200,
-          data:{
-            satoken:user.satoken,
-            status:user.status,
-            profile: {
+        if (result) {
+          // 密码匹配
+          console.log('密码匹配');
+          res.send({
+            code:1000,
+            data:{
+              satoken:user.satoken,
+              status:user.status,
               UID:user.UID,
               username: user.username,
               nickname: user.nickname,
               avatar: user.avatar,
-              description: user.description
-            }
-          }
-        })
-      } else {
-        // 密码不匹配
-        console.log('密码不匹配');
-        res.send({
-          data:500,
-          data:"用户名或密码错误"
-        })
-      }
-    })
-  }catch (error){
-    console.log(error);
+              description: user.description,
+              tags:user.tags
+            },
+            message:"请求成功",
+            success:true
+          })
+        } else {
+          // 密码不匹配
+          console.log('密码不匹配');
+          res.send({
+            data:500,
+            data:"用户名或密码错误"
+          })
+        }
+      })
+    }catch (error){
+      console.log(error);
+    }
   }
   })
 
@@ -94,7 +97,17 @@ router.post('/register', async (req, res, next) => {
     avatar:req.body.avatar,
     status: false
     }).then((success)=>{
-      res.send(success);
+      res.send({
+        code:1000,
+        data:{
+          username:success.username,
+          nickname:success.username,
+          avatar:success.avatar,
+          description:success.description
+        },
+        message:'注册成功',
+        success:'true'
+      });
   }).catch((err)=>{
     console.log("出现错误",err);
     res.send("注册失败")
@@ -130,5 +143,37 @@ router.get('/list', async(req, res, next)=>{
   })
 })
 
+//修改用户标签
+router.post('/updateTag',async (req,res)=>{
+    console.log('接收到更改用户标签的请求:',req.body.data);
+    console.log('UID：',req.body);
+    const tagArr = req.body.data;
+    const user = await  User.findOne({UID:req.body.UID});
+    if(user){
+      user.tags.splice(0, user.tags.length);
+      console.log('user:',user);
+        for(let i =0;i<tagArr.length;i++){
+        user.tags.push({tagName:tagArr[i]})
+      }
+      console.log(user);
+      const NewUser  = await user.save();
+
+      res.send({
+        code:1000,
+        data:user.tags,
+        success:true
+      })
+
+      console.log('标签修改成功');
+    }else{
+      console.log('没找到user:',user);
+      res.send({
+        code:1000,
+        msg:"没找到用户",
+        success:false
+      })
+    }
+
+})
 module.exports = router;
 

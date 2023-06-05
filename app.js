@@ -14,6 +14,19 @@ var mongoose = require('./API/Mongoose');
 
 var app = express();
 
+const cors = require('cors');
+
+
+app.use(express.json());
+
+// 或者，仅允许特定来源的请求
+app.use(cors({
+  origin: 'http://localhost:5174', // 允许的请求源
+  methods: ['GET', 'POST'], // 允许的请求方法
+}));
+
+
+
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'pug');

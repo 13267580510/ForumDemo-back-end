@@ -1,23 +1,35 @@
 var express = require('express');
 var router = express.Router();
 const { Issue } = require('../API/Model/Issue');
+const moment = require("moment-timezone");
+const Console = require("console");
 
 //新增问题
 router.post('/addIssue',async (req,res)=>{
     console.log('新增问题请求');
-    console.log('req:',req.body.username);
+    console.log('req:',req.body);
 
     const issue = await  Issue.create({
         title:req.body.title,
         content:req.body.content,
-        category:req.body.category,
+        categoryId:req.body.categoryId,
         author:req.body.author,
-        createTime:req.body.createTime,
-        updateTime:req.body.updateTime,
-        UID:req.body.UID
-    }).then((success)=>{
+        UID:req.body.UID,
+        contactWay:req.body.contactWay,
+        contactNumber:req.body.contactNumber
+    }).then(async  (success)=>{
         console.log('新增问题成功');
-        res.send(success);
+        res.send({
+            code:1000,
+            data:{
+                content:await Issue.find(),
+                current:1,
+                size:10,
+                total:await Issue.find().countDocuments()
+            },
+            message:"请求成功",
+            success:true,
+        });
     }).catch((err)=>{
         console.log('新增问题失败',err);
         res.send(err)
@@ -47,8 +59,39 @@ router.post('/getIssue',async (req,res)=> {
 router.get('/getIssueInfo',async (req,res)=> {
     console.log("接收到获取所有问题请求");
     const issue  = await Issue.find();
+    if(issue){
+        res.send({
+            code:1000,
+            data:{
+                content:issue,
+                current:1,
+                size:10,
+                total:await Issue.find().countDocuments()
+            },
+            message:"请求成功",
+            success:true,
+        });
+    }
     console.log(issue)
-    res.send(issue);
+})
+//获取用户自己提出的问题
+router.post('/getUserIssue',async  (req,res)=>{
+    console.log('接收到用户:',req.body.UID,"的获取问题请求");
+    const issue = await  Issue.findOne({UID:req.body.UID});
+    console.log('Issue:',issue);
+    if(issue){
+        res.send({
+            code:1000,
+            data:{
+                content:issue,
+                current:1,
+                size:10,
+                total:await Issue.find().countDocuments()
+            },
+            message:"请求成功",
+            success:true,
+        });
+    }
 })
 //删除问题
 router.post('/deleteIssue',async (req,res)=>{
@@ -82,7 +125,7 @@ router.post('/updateIssue',async (req,res)=>{
                     title:req.body.title,
                     content:req.body.content,
                     category:req.body.category,
-                    updateTime:Date.now()
+                    updateTime:() => moment().tz('Asia/Shanghai').format()
                 },
                 {new:true}
             ).then(result=>{

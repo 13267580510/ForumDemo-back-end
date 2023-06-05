@@ -12,7 +12,7 @@ const IssueSchema = new mongodb.Schema({
             type:String,
             required:true
         },
-        category:{
+        categoryId:{
             type:String,
             required:true
         },
@@ -27,6 +27,14 @@ const IssueSchema = new mongodb.Schema({
         updateTime:{
             type:Date,
             default:() => moment().tz('Asia/Shanghai').format()
+        },
+        contactWay:{
+            type:String,
+            required:true
+        },
+        contactNumber:{
+            type:String,
+            required:true
         },
         UID:{
             type:Number,

@@ -45,7 +45,21 @@ const UserSchema = new mongoose.Schema({
     },
     avatar:{
         type: String,
-        required:true
+        default:null
+    },
+    description:{
+        type: String,
+        default:null,
+    },
+    tags:{
+        type:[
+            {
+                tagName:{
+                    type:String,
+                    default:null
+                }
+            }
+        ]
     },
     createTime: {
         type: Date,
@@ -62,14 +76,17 @@ const UserSchema = new mongoose.Schema({
 // 在保存前生成自增 UID
 UserSchema.pre('save', async function (next) {
     try {
-        const doc = this;
-        // 在数据库中查找最大的 UID 值
-        const user = await mongoose.models['User']
-            .findOne({}, {}, { sort: { UID: -1 } })
-            .exec();
+        // 只有在 UID 未定义时才自增
+        if (!this.UID) {
+            const doc = this;
+            // 在数据库中查找最大的 UID 值
+            const user = await mongoose.models['User']
+                .findOne({}, {}, { sort: { UID: -1 } })
+                .exec();
 
-        // 自增 UID 值
-        doc.UID = user ? user.UID + 1 : 1;
+            // 自增 UID 值
+            doc.UID = user ? user.UID + 1 : 1;
+        }
         next();
     } catch (err) {
         next(err);
