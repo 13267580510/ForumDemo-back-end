@@ -45,7 +45,7 @@ const UserSchema = new mongoose.Schema({
     },
     avatar:{
         type: String,
-        default:null
+        default:"default"
     },
     description:{
         type: String,

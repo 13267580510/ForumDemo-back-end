@@ -12,14 +12,35 @@ router.post('/addOneLevelComment',async (req,res)=>{
         content:req.body.content,
         author:req.body.author,
         UID:req.body.UID,
-        likes:req.body.likes,
-        dislikes:req.body.dislikes
     }).then((result)=>{
         console.log(result);
         res.send({
-            code:200,
-            data:result
+            // code:200,
+            // data:result
+            code:1000,
+            data:{
+                 author:{
+
+                 },
+                 content:"",
+                 createTime:"",
+                 id:""
+                 },
+            success:true,
+            message:"请求成功"
         })
+         /*
+          code:1000
+         *data:{
+         * author
+         * content
+         *createTime
+         * id=_id
+         * }
+         *success:true
+          message:""请求成功
+         *
+         * */
     }).catch((err)=>{
         console.log("出现错误",err);
         res.send({
@@ -31,9 +52,19 @@ router.post('/addOneLevelComment',async (req,res)=>{
 })
 //查找该问题下的所有评论
 router.post('/getComment',async (req,res)=>{
-    console.log('接收到获取所有评论的请求');
-    const commentList = await  Comment.find({issueID:req.body.issueID})
-    res.send(commentList);
+    console.log('接收到获取所有评论的请求',req.body.issueID);
+    const comment = await Comment.find({issueID:req.body.issueID});
+    console.log("comment:",comment);
+    if(comment){
+        res.send({
+            code:1000,
+            data:comment,
+            message:"请求成功",
+            success:true
+        });
+
+    }
+
 })
 //删除某一级评论
 router.post('/deleteComment',async  (req,res)=>{
@@ -64,8 +95,8 @@ router.post('/addTw0LevelComment', async (req, res) => {
     if (comment) {
         console.log('评论存在:', comment);
         const commentId = comment._id;
-        const replyForm = req.body.replyForm;
-
+        const replyForm = req.body.twoReplyForm;
+        console.log("req");
         try {
             const foundComment = await Comment.findById(commentId);
             if (foundComment) {
@@ -76,6 +107,12 @@ router.post('/addTw0LevelComment', async (req, res) => {
                 const savedComment = await foundComment.save();
 
                 console.log('回复添加成功');
+                res.send({
+                    code:1000,
+                    data:savedComment,
+                    message:"请求成功",
+                    success:true
+                })
             } else {
                 console.log('未找到指定的 Comment 对象');
             }
@@ -107,10 +144,12 @@ router.post('/addTwoLevelReply',async (req,res)=>{
     console.log('接收到了增加二级评论请求，请求体如下：', req.body);
     // 判断是否存在回复的一级评论
     const OneComment = await Comment.findOne({ _id: req.body._id });
+
     //判断是否存在要回复一级评论的二级评论
     if (OneComment) {
         console.log('一级评论存在:', OneComment);
-        const commentIndex = req.body.index;
+        const commentIndex = req.body.twoReplyForm.replyToIndex;
+        console.log("commentIndex",commentIndex);
         const TwoComent = OneComment.replies[commentIndex];
             if(TwoComent){
                 console.log('二级评论存在:', TwoComent);
@@ -126,9 +165,10 @@ router.post('/addTwoLevelReply',async (req,res)=>{
 
                         console.log('回复添加成功',savedComment);
                         res.send({
-                            code:200,
-                            OneComment:OneComment,
-                            TwoComent:TwoComent,
+                            code:1000,
+                            message:"请求成功",
+                            success:true,
+                            data:savedComment
                         });
                     } else {
                         console.log('未找到指定的 Comment 对象');

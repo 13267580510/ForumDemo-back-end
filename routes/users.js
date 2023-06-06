@@ -49,7 +49,7 @@ router.post('/login',async (req,res,next)=>{
           console.log('密码不匹配');
           res.send({
             data:500,
-            data:"用户名或密码错误"
+            message:"用户名或密码错误"
           })
         }
       })

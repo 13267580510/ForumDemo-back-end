@@ -40,7 +40,16 @@ const IssueSchema = new mongodb.Schema({
             type:Number,
             ref:'User',
             required:true
-        }
+        },
+        solved:{
+            type:Boolean,
+            default:false
+        },
+        voteCount:{
+            type:Number,
+            default:0
+        },
+
 });
 
 // 建立问题回答模块数据库模型

@@ -1,8 +1,8 @@
 var express = require('express');
 var router = express.Router();
 const { Issue } = require('../API/Model/Issue');
+const {User} = require('../API/Model/User');
 const moment = require("moment-timezone");
-const Console = require("console");
 
 //新增问题
 router.post('/addIssue',async (req,res)=>{
@@ -39,10 +39,43 @@ router.post('/addIssue',async (req,res)=>{
 router.post('/getIssue',async (req,res)=> {
     console.log("接收到查询问题请求",req.body);
     //判断是根据关键字查找问题，还是根据问题_id来查找
-    if(req.body._id){
+    if(req.body.id) {
         console.log('开始根据问题_id查找');
-        const issue = await  Issue.findOne({_id:req.body._id});
-        res.send(issue);
+        const issue = await Issue.findOne({_id: req.body.id});
+        const user = await User.findOne({UID: issue.UID});
+        console.log("author:", user);
+        if (user) {
+        res.send({
+            code: 1000,
+            data: {
+                author: {
+                    avatar: "default",
+                    description: user.description,
+                    nickname: user.nickname,
+                    username: user.username
+                },
+                category: {
+                    name: "",
+                    code: issue.categoryId
+                },
+                commentCount: 0,
+                comments: [],
+                contactNumber: issue.contactNumber,
+                contactWay: issue.contactWay,
+                content: issue.content,
+                createTime: issue.createTime,
+                title: issue.title,
+                voteCount:issue.voteCount
+            },
+            message: "请求成功",
+            success: true
+        });
+        }else{
+            res.send({
+                message:"提出此问题的用户已经注销",
+                success:false
+            })
+        }
     }
     if(req.body.keyword){
         const keyword = req.body.keyword;
@@ -143,4 +176,27 @@ router.post('/updateIssue',async (req,res)=>{
 
 
 })
+//点赞此问题
+router.post('/vote',async (req,res)=>{
+    console.log('接收到点赞问题请求:',req.body.id);
+    const issue = await Issue.findOne({_id:req.body.id});
+    if(issue){
+        console.log('找到Issue:',issue);
+        issue.voteCount = issue.voteCount+1;
+        console.log('voteCount:',issue.voteCount);
+        const result = await issue.save();
+        res.send({
+            code:1000,
+            message:"请求成功",
+            success:true
+        })
+    }else{
+        console.log("未找到此问题:",issue);
+        res.send({
+            code:3003,
+            message:"此问题已经注销",
+            success:false
+        })
+    }
+});
 module.exports = router;

@@ -72,7 +72,6 @@ const CommentSchema = new mongodb.Schema({
     dislikes:{
         type:Number,
         default:0,
-        required:true
     },
     createTime: {
         type: Date,
