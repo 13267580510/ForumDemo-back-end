@@ -49,6 +49,10 @@ const IssueSchema = new mongodb.Schema({
             type:Number,
             default:0
         },
+        commentCount:{
+            type:Number,
+            default:0
+        }
 
 });
 

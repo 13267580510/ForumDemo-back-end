@@ -3,6 +3,7 @@ var router = express.Router();
 const { Issue } = require('../API/Model/Issue');
 const {User} = require('../API/Model/User');
 const moment = require("moment-timezone");
+const {Comment} = require("../API/Model/Comment");
 
 //新增问题
 router.post('/addIssue',async (req,res)=>{
@@ -92,6 +93,8 @@ router.post('/getIssue',async (req,res)=> {
 router.get('/getIssueInfo',async (req,res)=> {
     console.log("接收到获取所有问题请求");
     const issue  = await Issue.find();
+    // const comment = await Comment.find()
+    // issue.commentCount = await I
     if(issue){
         res.send({
             code:1000,
@@ -110,7 +113,7 @@ router.get('/getIssueInfo',async (req,res)=> {
 //获取用户自己提出的问题
 router.post('/getUserIssue',async  (req,res)=>{
     console.log('接收到用户:',req.body.UID,"的获取问题请求");
-    const issue = await  Issue.findOne({UID:req.body.UID});
+    const issue = await  Issue.find({UID:req.body.UID});
     console.log('Issue:',issue);
     if(issue){
         res.send({

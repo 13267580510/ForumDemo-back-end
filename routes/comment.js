@@ -2,6 +2,7 @@ var express = require('express');
 var router = express.Router();
 const {Comment} = require('../API/Model/Comment');
 const {Issue} = require("../API/Model/Issue");
+const {User} = require("../API/Model/User");
 //增加一级评论
 router.post('/addOneLevelComment',async (req,res)=>{
 
@@ -12,7 +13,9 @@ router.post('/addOneLevelComment',async (req,res)=>{
         content:req.body.content,
         author:req.body.author,
         UID:req.body.UID,
-    }).then((result)=>{
+    }).then(async  (result)=>{
+        await Issue.findOneAndUpdate({_id:req.body.issueID},{ $inc: { commentCount: 1 } })
+        const user =  await  User.findOne({UID:req.body.UID});
         console.log(result);
         res.send({
             // code:200,
@@ -20,27 +23,21 @@ router.post('/addOneLevelComment',async (req,res)=>{
             code:1000,
             data:{
                  author:{
-
+                     nickname:user.nickname
                  },
-                 content:"",
-                 createTime:"",
-                 id:""
+                 UID:user.UID,
+                 issueID:req.body.issueID,
+                 replies:result.replies,
+                 content:result.content,
+                 createTime:result.createTime,
+                 id:result._id,
+                 likes:result.likes,
+                 dislikes:result.dislikes,
                  },
             success:true,
             message:"请求成功"
         })
-         /*
-          code:1000
-         *data:{
-         * author
-         * content
-         *createTime
-         * id=_id
-         * }
-         *success:true
-          message:""请求成功
-         *
-         * */
+
     }).catch((err)=>{
         console.log("出现错误",err);
         res.send({
@@ -71,19 +68,35 @@ router.post('/deleteComment',async  (req,res)=>{
     console.log('接收到删除请求,开始判断权限',req.body.UID);
 
     //从数据库中调取请求删除的问题的作者UID
-    const comment  = await Comment.findOne({_id:req.body.item._id})
-
-    if(req.body.UID == comment.UID){
-        await Comment.findOneAndDelete({_id:req.body.item._id});
-        res.send({
-            code:200,
-            data:'删除成功'
-        });
-    }else {
-        res.send({
-            code:500,
-            data:'删除失败'
-        });
+    const comment  = await Comment.findOne({_id:req.body.id})
+    console.log("comment.UID:",comment);
+    if(comment){
+        try{
+            if(req.body.UID == comment.UID){
+                console.log("此评论的问题id是：",comment.issueID);
+                const issueID = comment.issueID;
+                await Issue.findOneAndUpdate(
+                    {_id:issueID},
+                    { $inc: { commentCount: -1 } }
+                );
+                await Comment.findOneAndDelete({_id:req.body.id});
+                res.send({
+                    code:200,
+                    data:'删除成功',
+                    success:true,
+                    message:"请求成功"
+                });
+            }else {
+                res.send({
+                    code:500,
+                    data:'删除失败'
+                });
+            }
+        }catch{
+            console.log("删除失败");
+        }
+    }else{
+        console.log("未找到该评论");
     }
 })
 //增加某一级评论的二级评论
@@ -96,6 +109,7 @@ router.post('/addTw0LevelComment', async (req, res) => {
         console.log('评论存在:', comment);
         const commentId = comment._id;
         const replyForm = req.body.twoReplyForm;
+        const issueID = comment.issueID;
         console.log("req");
         try {
             const foundComment = await Comment.findById(commentId);
@@ -105,7 +119,11 @@ router.post('/addTw0LevelComment', async (req, res) => {
 
                 // 保存修改后的 Comment 对象到数据库
                 const savedComment = await foundComment.save();
-
+                //给该评论的问题的评论数+1
+                const issue = await Issue.findOneAndUpdate(
+                    {_id:issueID},
+                    { $inc: { commentCount: 1 } }
+                )
                 console.log('回复添加成功');
                 res.send({
                     code:1000,
@@ -120,7 +138,11 @@ router.post('/addTw0LevelComment', async (req, res) => {
             console.error(error);
         }
     } else {
-        // 处理评论不存在的情况
+       res.send({
+           code:3003,
+           success:false,
+           message:"评论未找到或已删除"
+       })
     }
 });
 //删除二级评论
@@ -134,7 +156,19 @@ router.post('/deleteTwoLevelComment',async (req,res)=>{
     if(comment.UID == req.body.UID){
         const index = req.body.index;
         comment.replies.splice(index, 1);
-        await comment.save();
+       const result = await comment.save();
+       const issueID =  result.issueID;
+        await Issue.findOneAndUpdate(
+            {_id:issueID},
+            { $inc: { commentCount: -1 } }
+        );
+       console.log("result:",result);
+       res.send({
+           code:1000,
+           data:result,
+           success:true,
+           message:"请求成功"
+       })
     }else{
 
     }
@@ -184,4 +218,56 @@ router.post('/addTwoLevelReply',async (req,res)=>{
         console.log('没有请求的一级评论');
     }
 });
+//一级评论点赞
+router.post('/voteOneLevelComment',async(req,res)=>{
+        console.log("接收到一级评论点赞请求:",req.body.id);
+        //开始查询是否有此评论
+        const commentID = req.body.id
+        const result = await Comment.findOneAndUpdate(
+            {_id:commentID},
+            { $inc: { likes: +1 } }
+        )
+        if(result){
+            res.send({
+                code:1000,
+                message:"请求成功",
+                success:true
+            })
+        }else{
+            res.send({
+                code:3003,
+                message:"请求失败",
+                success:false
+            })
+        }
+
+})
+//二级评论点赞
+router.post('/voteTwoLevelComment', async (req, res) => {
+    const comment = await Comment.findOne({ _id: req.body.item._id });
+
+    if (comment) {
+        // 找到需要点赞的二级评论的索引
+        const index = req.body.index;
+
+        // 使用 $inc 操作符将 likes 属性加1
+        comment.replies[index].likes += 1;
+
+        // 保存更新后的评论对象
+        await comment.save();
+
+        res.send({
+            code: 1000,
+            message: '请求成功',
+            success: true
+        });
+    } else {
+        res.send({
+            code: 3003,
+            message: '请求失败',
+            success: false
+        });
+    }
+});
+
 module.exports = router;
