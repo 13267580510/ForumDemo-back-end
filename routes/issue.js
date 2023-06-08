@@ -130,21 +130,50 @@ router.post('/getUserIssue',async  (req,res)=>{
     }
 })
 //删除问题
-router.post('/deleteIssue',async (req,res)=>{
-    console.log("接收到删除问题请求",req.body);
-    // 构造搜索条件
-    const filter = { _id: req.body._id };
+router.post('/deleteIssue', async (req, res) => {
+    console.log('接收到删除问题请求', req.body);
+    const filter = { _id: req.body.id };
+    const UID = req.body.UID;
 
-    // 执行删除操作
-    const result = await Issue.findOneAndDelete(filter);
-    console.log(result);
+    try {
+        const issue = await Issue.findOne(filter);
 
-})
+        // 鉴权
+        if (UID == issue.UID) {
+            // 删除问题
+            const result = await Issue.findOneAndDelete(filter,{new:true});
+             const updateIssue = await  Issue.find();
+            console.log('删除成功', result);
+            res.send({
+                code: 1000,
+                data: updateIssue,
+                success: true,
+                message: '请求成功'
+            });
+        } else {
+            console.log('用户无权限删除该问题');
+            res.send({
+                code: 3003,
+                data: '删除失败，用户无权限',
+                success: false,
+                message: '请求失败'
+            });
+        }
+    } catch (error) {
+        console.log('删除问题失败', error);
+        res.send({
+            code: 500,
+            data: '删除失败',
+            success: false,
+            message: '请求失败'
+        });
+    }
+});
 //修改问题
 router.post('/updateIssue',async (req,res)=>{
     console.log('接收到修改问题请求，以下是新的问题信息:',req.body);
     //调取需要修改的问题具体信息
-    const IssueID=req.body._id;
+    const IssueID=req.body.id;
     const issue = await Issue.findOne({
         _id:IssueID
     })
@@ -155,18 +184,23 @@ router.post('/updateIssue',async (req,res)=>{
         //判断是否为原作者
         if(issue.UID==req.body.UID){
             console.log('权限核对完成，开始修改信息');
-            Issue.findOneAndUpdate(
+           await Issue.findOneAndUpdate(
                 {_id:IssueID},
                 {
-                    title:req.body.title,
-                    content:req.body.content,
-                    category:req.body.category,
-                    updateTime:() => moment().tz('Asia/Shanghai').format()
+                    title:req.body.issueUpdateForm.title,
+                    content:req.body.issueUpdateForm.content,
+                    category:req.body.issueUpdateForm.category,
+                    updateTime:moment().tz('Asia/Shanghai').format()
                 },
                 {new:true}
             ).then(result=>{
                 console.log('问题修改完成');
-                res.send(result);
+                res.send({
+                    code:1000,
+                    message:"请求成功",
+                    success:true,
+                    data:result
+                });
             }).catch(err=>{
                 console.log(err);
             })
