@@ -78,15 +78,26 @@ router.post('/getIssue',async (req,res)=> {
             })
         }
     }
-    if(req.body.keyword){
+    if(req.body.UID && req.body.keyword){
+
+        console.log("开始根据关键字查询问题");
+        const UID = req.body.UID;
         const keyword = req.body.keyword;
-        const issue = await Issue.find({
-            $or: [
-                {title: {$regex: keyword, $options: 'i'}}, // 匹配标题字段
-                {content: {$regex: keyword, $options: 'i'}}, // 匹配内容字段
-            ]
-        })
-        res.send(issue);
+
+            const issue = await Issue.find({
+                UID:UID,
+                $or: [
+                    {title: {$regex: keyword, $options: 'i'}}, // 匹配标题字段
+                    {content: {$regex: keyword, $options: 'i'}}, // 匹配内容字段
+                ]
+            })
+            res.send({
+                code:1000,
+                data:issue,
+                message:"请求成功",
+                success:true
+            });
+
     }
 })
 //获取所有问题
@@ -116,16 +127,17 @@ router.post('/getUserIssue',async  (req,res)=>{
     const issue = await  Issue.find({UID:req.body.UID});
     console.log('Issue:',issue);
     if(issue){
-        res.send({
-            code:1000,
-            data:{
-                content:issue,
-                current:1,
-                size:10,
-                total:await Issue.find().countDocuments()
-            },
-            message:"请求成功",
-            success:true,
+
+            res.send({
+                code:1000,
+                data:{
+                    content:issue,
+                    current:1,
+                    size:10,
+                    total:await Issue.find().countDocuments()
+                },
+                message:"请求成功",
+                success:true,
         });
     }
 })
@@ -236,4 +248,33 @@ router.post('/vote',async (req,res)=>{
         })
     }
 });
+//标记此问题已经解决
+router.post('/solved',async (req,res)=>{
+    const UID = req.body.UID;
+    const issueID = req.body.issueID;
+    const issue = await  Issue.findOne({_id:issueID});
+    //查找有无此问题
+    if(issue){
+        //鉴权
+        if(issue.UID==UID){
+         const result =  await Issue.findOneAndUpdate(
+                {_id:issueID},
+                {solved:true},
+                {new:true})
+
+             console.log("result",result);
+            res.send({
+                code:1000,
+                message:"请求成功",
+                success:true,
+                data:result
+            })
+        }
+
+    }else{
+
+    }
+
+
+})
 module.exports = router;
