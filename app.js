@@ -11,7 +11,7 @@ var issueRouter = require('./routes/issue');
 var commentRouter = require('./routes/comment');
 var categorysRouter = require('./routes/IssueCategorys');
 var DocCategoryRouter = require('./routes/DocCategory');
-
+var docRouter = require('./routes/doc');
 var mongoose = require('./API/Mongoose');
 
 var app = express();
@@ -46,7 +46,7 @@ app.use('/issue',issueRouter);
 app.use('/comment',commentRouter);
 app.use('/categorys',categorysRouter);
 app.use('/DocCategory',DocCategoryRouter);
-
+app.use('/doc',docRouter);
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   next(createError(404));

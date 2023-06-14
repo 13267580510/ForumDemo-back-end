@@ -15,10 +15,6 @@ const DocSchema = new mongodb.Schema({
         type:String,
         required: true
     },
-    sort:{
-        type:Number,
-        required: true
-    },
     author:{
         type:String,
         required: true
@@ -30,7 +26,7 @@ const DocSchema = new mongodb.Schema({
     },
     DocsID:{
         type:mongoose.Schema.Types.ObjectId,
-        required: true
+        default:null
     },
     createTime:{
         type:Date,
@@ -40,9 +36,19 @@ const DocSchema = new mongodb.Schema({
         type:Date,
         default:() => moment().tz('Asia/Shanghai').format()
     },
+    tags:{
+        type:[
+            {
+                tagName:{
+                    type:String,
+                    default:null
+                }
+            }
+        ]
+    },
 
 })
-
-const Doc = mongoose.models('Doc',DocSchema);
+//const DocCategory = mongoose.model('DocCategory',DocCategorySchema);
+const Doc = mongoose.model('Doc',DocSchema);
 
 module.exports = { Doc }

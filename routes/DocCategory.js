@@ -1,7 +1,7 @@
 var express = require('express');
 var router = express.Router();
 const {DocCategory} = require('../API/Model/DocCategory');
-const {models} = require("mongoose");
+
 //创建文档种类
 router.post('/createDCategory',async (req,res)=>{
     console.log("接收到请求创建文档种类请求：",req.body);
