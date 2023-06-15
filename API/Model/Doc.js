@@ -46,6 +46,14 @@ const DocSchema = new mongodb.Schema({
             }
         ]
     },
+    likes:{
+        type:Number,
+        default:0
+    },
+    collects:{
+        type:Number,
+        default:0
+    }
 
 })
 //const DocCategory = mongoose.model('DocCategory',DocCategorySchema);
