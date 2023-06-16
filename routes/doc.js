@@ -1,6 +1,7 @@
 var express = require('express');
 var router = express.Router();
 const {Doc} = require('../API/Model/Doc');
+const {Issue} = require("../API/Model/Issue");
 //新增文档
 router.post('/createDoc',async (req,res)=>{
     console.log("接收到增加文档请求",req.body);
@@ -91,19 +92,55 @@ router.post('/deleteDoc',async (req,res)=>{
 });
 //查找某一个文档
 router.post('/findOne',async  (req,res)=>{
-    const _id = req.body._id;
-    const result = await  Doc.findOne({_id:_id});
-    if(result){
-        res.send({
-            code:1000,
-            message:"请求成功",
-            success:true,
-            data:result
+    //分为模糊查找和具体查找
+    //用id为具体查找，关键字为模糊查找
+    if(req.body._id && !req.body.keywords){
+        const _id = req.body._id;
+        const result = await  Doc.findOne({_id:_id});
+        if(result){
+            res.send({
+                code:1000,
+                message:"请求成功",
+                success:true,
+                data:result
+            })
+        }else{
+            res.send({
+                code:3003,
+                message:"请求失败",
+                success:false,
+            })
+        }
+    }if(req.body.keywords){
+        console.log("开始模糊查找,关键字:",req.body.keywords);
+        const UID = req.body.UID;
+        const keywords = req.body.keywords;
+        const result = await Doc.find({
+            UID:UID,
+            $or: [
+                {title: {$regex: keywords, $options: 'i'}}, // 匹配标题字段
+                {content: {$regex: keywords, $options: 'i'}}, // 匹配内容字段
+            ]
         })
-    }else{
+        if(result){
+            res.send({
+                code:1000,
+                message:"请求成功",
+                success:true,
+                data:result
+            })
+        }else{
+            res.send({
+                code:3003,
+                message:"请求失败",
+                success:false,
+            })
+        }
+    }
+    else{
         res.send({
             code:3003,
-            message:"请求失败",
+            message:"请求条件有误！",
             success:false,
         })
     }

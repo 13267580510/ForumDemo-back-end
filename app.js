@@ -12,6 +12,7 @@ var commentRouter = require('./routes/comment');
 var categorysRouter = require('./routes/IssueCategorys');
 var DocCategoryRouter = require('./routes/DocCategory');
 var docRouter = require('./routes/doc');
+var favoriteRouter = require('./routes/favorite');
 var mongoose = require('./API/Mongoose');
 
 var app = express();
@@ -47,6 +48,7 @@ app.use('/comment',commentRouter);
 app.use('/categorys',categorysRouter);
 app.use('/DocCategory',DocCategoryRouter);
 app.use('/doc',docRouter);
+app.use('/favorite',favoriteRouter);
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   next(createError(404));
