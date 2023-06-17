@@ -24,10 +24,6 @@ const DocSchema = new mongodb.Schema({
         ref:"User",
         required: true
     },
-    DocsID:{
-        type:mongoose.Schema.Types.ObjectId,
-        default:null
-    },
     createTime:{
         type:Date,
         default:() => moment().tz('Asia/Shanghai').format()

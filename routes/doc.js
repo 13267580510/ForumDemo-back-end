@@ -92,6 +92,7 @@ router.post('/deleteDoc',async (req,res)=>{
 });
 //查找某一个文档
 router.post('/findOne',async  (req,res)=>{
+    try{
     //分为模糊查找和具体查找
     //用id为具体查找，关键字为模糊查找
     if(req.body._id && !req.body.keywords){
@@ -143,6 +144,9 @@ router.post('/findOne',async  (req,res)=>{
             message:"请求条件有误！",
             success:false,
         })
+    }
+    }catch (err){
+        console.log("err:",err);
     }
 });
 //修改文档
@@ -204,4 +208,50 @@ router.post('/updateDoc',async (req,res)=>{
         })
     }
 });
+//获取所有文档
+router.get('/getAll',async (req,res)=>{
+    const result = await Doc.find();
+    if(result){
+        res.status(200).send({
+            code:1000,
+            success:true,
+            message:"请求成功",
+            data:result
+        })
+    }else{
+        res.status(404).send({
+                code:3003,
+                message:"请求失败",
+                success:false,
+        })
+    }
+});
+//点赞
+router.post('/vote',async (req,res)=>{
+    try {
+        const doc = await Doc.findOne({_id:req.body._id});
+        if(doc){
+            console.log('找到doc:',doc);
+            doc.likes = doc.likes+1;
+            console.log('likes:', doc.likes );
+            const result = await doc.save();
+            res.status(200).send({
+                code:1000,
+                message:"请求成功",
+                success:true
+            })
+        }else{
+            console.log("未找到此问题:",issue);
+            res.status(404).send({
+                code:3003,
+                message:"此问题已经注销",
+                success:false
+            })
+        }
+    }catch (err){
+        console.log(err);
+    }
+
+
+})
 module.exports=router;
