@@ -90,6 +90,7 @@ router.post('/findOne',async (req,res)=>{
 
     }
 });
+//删除文档
 router.post('/delete',async (req,res)=>{
     //id为文档id
     const UID = req.body.UID;
@@ -132,33 +133,61 @@ router.post('/delete',async (req,res)=>{
         })
     }
 })
-//收藏文档
-router.post('/collecte',async  (req,res)=>{
+//判断该用户是否已经收藏了此文档
+router.post('/isCollecte',async  (req,res)=>{
+    const UID = req.body.UID;
     const DocID = req.body.DocID;
-    const FavoriteID = req.body.FavoriteID;
-    //开始判断有无此收藏夹以及有无此文档
-    const doc = await Doc.findOne({_id:DocID});
-    const favorite = await Favorite.findOne({_id:FavoriteID});
-    if( doc && favorite){
     try {
-            // 使用 findOneAndUpdate 方法找到用户的收藏文档并添加新的文档
-            const favorite = await Favorite.findOneAndUpdate(
-                { _id: FavoriteID },
-                { $push: { docs: { title: doc.title,introduction:doc.introduction,DocID:doc._id } } },
-                { new: true }
-            );
+        const result = await Favorite.find({ UID: UID, "docs.DocID": DocID });
 
-            return favorite;
-        } catch (error) {
-            // 处理收藏过程中的错误
-            throw new Error('收藏文档失败');
+        if (result.length > 0) {
+            console.log('给定的 DocID 在收藏夹中。');
+            res.send({
+                code:1000,
+                message:"请求成功",
+                data:true,
+                success:true,
+            })
+        } else {
+            console.log('给定的 DocID 不在收藏夹中。');
+            res.send({
+                code:3003,
+                message:"请求成功",
+                data:false,
+                success:true,
+            })
         }
-    }else{
-        res.status(400).send({
-            code:3003,
-            message:"文档不存在或收藏夹不存在",
-            success:false,
-        })
+    } catch (error) {
+        console.error('查询过程中出现错误：', error);
+    }
+})
+//移除收藏的文档
+router.post('/remove',async  (req,res)=>{
+    const DocID = req.body.DocID;
+    const UID = req.body.UID;
+    try {
+        const result = await Favorite.findOne({ UID: UID, "docs.DocID": DocID });
+        if(result) {
+            result.docs = result.docs.filter(doc => doc.DocID.toString() !== DocID);
+            await result.save();
+            //已找到需要移除的文档，开始移除文档
+
+            res.send({
+                code: 1000,
+                message: "请求成功",
+                success: true,
+            })
+        }
+        else {
+            res.send({
+                code:3003,
+                message:"请求失败",
+                success:false,
+            })
+        }
+
+    }catch (err){
+        console.log("在移除时遇到错误：",err);
     }
 })
 module.exports = router;

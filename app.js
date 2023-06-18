@@ -14,7 +14,8 @@ var DocCategoryRouter = require('./routes/DocCategory');
 var docRouter = require('./routes/doc');
 var favoriteRouter = require('./routes/favorite');
 var mongoose = require('./API/Mongoose');
-
+var fileUpload = require('express-fileupload');
+var filesRouter = require('./routes/file')
 var app = express();
 
 const cors = require('cors');
@@ -49,10 +50,18 @@ app.use('/categorys',categorysRouter);
 app.use('/DocCategory',DocCategoryRouter);
 app.use('/doc',docRouter);
 app.use('/favorite',favoriteRouter);
+
+//文件功能板块
+
+app.use(fileUpload());
+app.use('/files', filesRouter)
+
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   next(createError(404));
 });
+
+
 
 // error handler
 app.use(function(err, req, res, next) {

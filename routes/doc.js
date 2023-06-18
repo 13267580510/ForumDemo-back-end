@@ -2,6 +2,7 @@ var express = require('express');
 var router = express.Router();
 const {Doc} = require('../API/Model/Doc');
 const {Issue} = require("../API/Model/Issue");
+const {Favorite} = require("../API/Model/Favorite");
 //新增文档
 router.post('/createDoc',async (req,res)=>{
     console.log("接收到增加文档请求",req.body);
@@ -96,6 +97,7 @@ router.post('/findOne',async  (req,res)=>{
     //分为模糊查找和具体查找
     //用id为具体查找，关键字为模糊查找
     if(req.body._id && !req.body.keywords){
+        console.log("req.body._id:",req.body._id,"req.body.keywords:",req.body.keywords)
         const _id = req.body._id;
         const result = await  Doc.findOne({_id:_id});
         if(result){
@@ -112,7 +114,7 @@ router.post('/findOne',async  (req,res)=>{
                 success:false,
             })
         }
-    }if(req.body.keywords){
+    }else if(req.body.keywords){
         console.log("开始模糊查找,关键字:",req.body.keywords);
         const UID = req.body.UID;
         const keywords = req.body.keywords;
@@ -254,4 +256,69 @@ router.post('/vote',async (req,res)=>{
 
 
 })
+//收藏文档
+router.post('/collecte',async  (req,res)=>{
+    const DocID = req.body.DocID;
+    const FavoriteID = req.body.FavoriteID;
+    const UID = req.body.UID;
+    //开始判断有无此收藏夹以及有无此文档
+    const doc = await Doc.findOne({_id:DocID});
+    const favorite = await Favorite.findOne({_id:FavoriteID});
+    if( doc && favorite){
+        try {
+            //开始查询此收藏夹内有无此文档
+            const isDocIDInFavorite =favorite.docs.some(doc => doc.DocID == DocID);
+            if(isDocIDInFavorite){
+                res.status(200 ).send({
+                    code:3003,
+                    success:false,
+                    message:"不可重复收藏同一篇文档",
+                })
+            }else{
+                //开始鉴权
+                if(UID == favorite.UID){
+                    // 使用 findOneAndUpdate 方法找到用户的收藏文档并添加新的文档
+                    const favorite = await Favorite.findOneAndUpdate(
+                        { _id: FavoriteID },
+                        { $push: { docs: { title: doc.title,introduction:doc.introduction,DocID:doc._id } } },
+                        { new: true }
+                    );
+                    if(favorite){
+                        doc.collects = doc.collects+1;
+                        await doc.save();
+                        res.status(200).send({
+                            code:1000,
+                            success:true,
+                            message:"收藏成功",
+                            data:favorite
+                        })
+                    }else{
+                        res.status(400).send({
+                            code:3003,
+                            success:false,
+                            message:"收藏失败",
+                        })
+                    }
+                }else{
+                    res.status(400).send({
+                        code:3003,
+                        success:false,
+                        message:"用户无权限",
+                    })
+                }
+
+            }
+        } catch (error) {
+            // 处理收藏过程中的错误
+            throw new Error('收藏文档失败');
+        }
+    }else{
+        res.status(400).send({
+            code:3003,
+            message:"文档不存在或收藏夹不存在",
+            success:false,
+        })
+    }
+})
+
 module.exports=router;
