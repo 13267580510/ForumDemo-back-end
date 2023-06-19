@@ -169,9 +169,11 @@ router.post('/remove',async  (req,res)=>{
         const result = await Favorite.findOne({ UID: UID, "docs.DocID": DocID });
         if(result) {
             result.docs = result.docs.filter(doc => doc.DocID.toString() !== DocID);
+            const doc = await Doc.findOne({_id:DocID});
+            doc.collects = doc.collects-1;
+            await  doc.save();
             await result.save();
             //已找到需要移除的文档，开始移除文档
-
             res.send({
                 code: 1000,
                 message: "请求成功",

@@ -1,7 +1,8 @@
 /*  controllers/fileController.js */
 const iconv = require('iconv-lite');
-
-const upload = (req, res) => {
+const {File} = require('../API/Model/File');
+const upload =async (req, res) => {
+   try{
     let fileObj = null;
     let filePath = '';
 
@@ -17,11 +18,15 @@ const upload = (req, res) => {
     console.log(req.files, req.files.file)
     fileObj = req.files.file;
 
-    const originalFileName = fileObj.name;
+    const fileName = iconv.decode(Buffer.from(fileObj.name, 'binary'), 'utf-8');
 
-    filePath = './upload/' +   iconv.decode(Buffer.from(originalFileName, 'binary'), 'utf-8');
+    filePath = './upload/' +  fileName ;
 
-    fileObj.mv(filePath, (err) => {
+    console.log("filePath:",filePath)
+
+     const file =   await File.findOne({fileName:fileName})
+    if(!file){
+        fileObj.mv(filePath, async (err) => {
         if(err) {
             return res.status(500).send({
                 code: 1,
@@ -29,13 +34,47 @@ const upload = (req, res) => {
             })
         }
 
-        res.send({
-            code: 0,
-            data: 'Upload Successfuly'
+        const result = await File.create({
+            fileName:fileName,
+            filePath:filePath
         })
+        if(result){
+            res.send({
+                code:1000,
+                message:"上传文件成功",
+                success:true
+            });
+        }
     })
+    }else{
+        res.send({
+            code:1000,
+            message:"已存在相同的文件，如果需要升级文件请联系管理员",
+            success:false
+        });
+    }
+   }catch (err){
+       console.log(err);
+   }
+
 }
 
+const download = (req, res) => {
+    const file = {
+        name: '无标题.png',
+        path: './upload/无标题.png'
+    }
+    let exist = fs.existsSync(path.resolve(file.path))
+    if(exist) {
+        res.download(file.path)
+    } else {
+        res.send({
+            code: 1,
+            msg: 'File Not Exits'
+        })
+    }
+}
 module.exports = {
-    upload
+    upload,
+    download
 }

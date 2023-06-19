@@ -52,7 +52,6 @@ app.use('/doc',docRouter);
 app.use('/favorite',favoriteRouter);
 
 //文件功能板块
-
 app.use(fileUpload());
 app.use('/files', filesRouter)
 
