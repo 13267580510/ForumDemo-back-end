@@ -1,6 +1,6 @@
 // 引入mongodb
 const mongoose = require('../Mongoose')
-const bcrypt = require('bcrypt')
+const bcrypt = require('bcryptjs');
 const moment = require("moment-timezone");
 // 建立用户表
 const UserSchema = new mongoose.Schema({

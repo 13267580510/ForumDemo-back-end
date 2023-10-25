@@ -4,8 +4,6 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
-
-
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 var issueRouter = require('./routes/issue');
@@ -15,8 +13,10 @@ var DocCategoryRouter = require('./routes/DocCategory');
 var docRouter = require('./routes/doc');
 var favoriteRouter = require('./routes/favorite');
 var mongoose = require('./API/Mongoose');
-var fileUpload = require('express-fileupload');
+
 var filesRouter = require('./routes/file')
+var actionRouter = require('./routes/action');
+
 var app = express();
 
 const cors = require('cors');
@@ -26,11 +26,9 @@ app.use(express.json());
 
 // 或者，仅允许特定来源的请求
 app.use(cors({
-  origin: 'http://localhost:5173', // 允许的请求源
+  origin: '*', // 允许的请求源
   methods: ['GET', 'POST'], // 允许的请求方法
 }));
-
-
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -51,9 +49,8 @@ app.use('/categorys',categorysRouter);
 app.use('/DocCategory',DocCategoryRouter);
 app.use('/doc',docRouter);
 app.use('/favorite',favoriteRouter);
-
+app.use('/action',actionRouter);
 //文件功能板块
-app.use(fileUpload());
 app.use('/files', filesRouter)
 
 // catch 404 and forward to error handler

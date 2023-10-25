@@ -3,6 +3,8 @@ var router = express.Router();
 const {Comment} = require('../API/Model/Comment');
 const {Issue} = require("../API/Model/Issue");
 const {User} = require("../API/Model/User");
+const {Action} = require('../API/Model/Action');
+const lodash = require('lodash');
 //增加一级评论
 router.post('/addOneLevelComment',async (req,res)=>{
 
@@ -51,28 +53,87 @@ router.post('/addOneLevelComment',async (req,res)=>{
    }
 })
 //查找该问题下的所有评论
-router.post('/getComment',async (req,res)=>{
+router.post('/getComment', async (req, res) => {
     try {
-        console.log('接收到获取所有评论的请求',req.body.issueID);
-        const comment = await Comment.find({issueID:req.body.issueID});
-        console.log("comment:",comment);
-        if(comment){
+        const issueID = req.body.issueID;
+        const UID = req.body.UID;
+        console.log('接收到获取所有评论的请求', req.body.UID);
+        console.log('接收到获取所有评论的请求', req.body.issueID);
+
+        // 通过issueID查找comment集合中的评论
+        let result = await Comment.find({ issueID }).lean();
+
+        let comments = lodash.clone(result);
+
+        if (comments) {
+            const updatedComments = [];
+
+            for (let comment of comments) {
+                const updatedReplys = [];
+
+                // 使用UID和comment的_id来查询Action集合
+                const action = await Action.findOne({ UID, targetID: comment._id });
+
+                // 如果找到匹配的对象，并且对象中有isFinish属性
+                if (action) {
+                    console.log("用户点赞过:",action)
+                    comment.isFinish = action.isFinish
+                } else{
+                    // 如果找不到action，说明用户没有点赞此问题
+                    // 先创建一个action
+                    await Action.create({
+                        UID,
+                        targetID: comment._id
+                    });
+                    console.log("用户未点赞过!");
+                    // 然后再给这个对象一个false
+                    comment.isFinish = false;
+                }
+
+                for (const reply of comment.replies) {
+                    const replyAction = await Action.findOne({ UID, targetID: reply._id });
+
+                    // 如果找到匹配的对象，并且对象中有isFinish属性
+                    if (replyAction) {
+                        // 在reply对象中添加isFinish属性
+                        reply.isFinish = replyAction.isFinish;
+                    } else {
+                        // 如果找不到replyAction，说明用户没有点赞此问题
+                        // 先创建一个action
+                        await Action.create({
+                            UID,
+                            targetID: reply._id
+                        });
+
+                        // 然后再给这个对象一个false
+                        reply.isFinish = false;
+                    }
+
+                    updatedReplys.push(reply);
+                }
+
+                comment.replies = updatedReplys;
+                updatedComments.push(comment);
+
+            }
+            console.log("评论列表已经修改:",updatedComments[0])//此处能输出isFinish，
+            console.log("开始回应");
             res.send({
-                code:1000,
-                data:comment,
-                message:"请求成功",
-                success:true
+                code: 1000,
+                data: updatedComments,
+                message: '请求成功',
+                success: true
             });
-
         }
-    }catch(err){
-        console.log("err:",err)
+    } catch (err) {
+        console.log('err:', err);
+        res.send({
+            code: 2000,
+            message: '请求失败',
+            success: false
+        });
     }
-
-
-
-
-})
+});
 //删除某一级评论
 router.post('/deleteComment',async  (req,res)=>{
     try {
@@ -254,64 +315,134 @@ router.post('/addTwoLevelReply',async (req,res)=>{
     }catch(err){
         console.log("err:",err)
     }
-
-
 });
 //一级评论点赞
 router.post('/voteOneLevelComment',async(req,res)=>{
     try {
 
+        const UID = req.body.UID;
         console.log("接收到一级评论点赞请求:",req.body.id);
         //开始查询是否有此评论
-        const commentID = req.body.id
+        const commentID = req.body.id;
+        const action = await Action.findOne({UID:UID,targetID:commentID});
+        if(action.isFinish){
+            res.send({
+                code:3003,
+                message:"不可重复点赞",
+                success:false
+            })
+        }else{
         const result = await Comment.findOneAndUpdate(
             {_id:commentID},
             { $inc: { likes: +1 } }
         )
-        if(result){
-            res.send({
-                code:1000,
-                message:"请求成功",
-                success:true
-            })
-        }else{
+
+            if(result){
+                await Action.findOneAndUpdate({UID:UID,targetID:commentID},{isFinish:true})
+                res.send({
+                    code:1000,
+                    message:"请求成功",
+                    success:true
+                })
+            }else{
+                res.send({
+                    code:3003,
+                    message:"评论不存在",
+                    success:false
+                })
+            }
+        }
+    }catch(err){
+        console.log("err:",err)
+    }
+})
+//取消一级评论点赞
+router.post('/cancelOneLevelVote',async (req,res)=>{
+    try {
+        const UID = req.body.UID;
+        console.log("接收到一级评论取消点赞请求:",req.body.id);
+        //开始查询是否有此评论
+        const commentID = req.body.id
+
+        const action = await Action.findOne({UID:UID,targetID:commentID});
+        if(action.isFinish==false){
             res.send({
                 code:3003,
-                message:"请求失败",
+                message:"不可重复取消点赞",
                 success:false
             })
+        }else {
+
+            const result = await Comment.findOneAndUpdate(
+                {_id: commentID},
+                {$inc: {likes: -1}}
+            )
+            if (result) {
+                const action = await Action.findOne({UID: UID, targetID: commentID});
+                if (action) {
+                    await Action.findOneAndUpdate({UID: UID, targetID: commentID}, {isFinish: false})
+                } else {
+                    const action = await Action.create({UID: UID, targetID: commentID});
+                    action.isFinish = true;
+                    await action.save();
+                }
+                res.send({
+                    code: 1000,
+                    message: "请求成功",
+                    success: true
+                })
+            } else {
+                res.send({
+                    code: 3003,
+                    message: "评论不存在",
+                    success: false
+                })
+            }
         }
     }catch(err){
         console.log("err:",err)
     }
 
-
-
-
-
 })
 //二级评论点赞
 router.post('/voteTwoLevelComment', async (req, res) => {
     try {
+        const UID = req.body.UID;
+        const comment = await Comment.findOne({_id: req.body.item._id});
+        const index = req.body.index;
+        console.log("comment",comment);
+        console.log("index",index);
 
-        const comment = await Comment.findOne({ _id: req.body.item._id });
+        const action = await Action.findOne({UID:UID,targetID:comment.replies[index]._id});
 
-        if (comment) {
-            // 找到需要点赞的二级评论的索引
-            const index = req.body.index;
-
-            // 使用 $inc 操作符将 likes 属性加1
-            comment.replies[index].likes += 1;
-
-            // 保存更新后的评论对象
-            await comment.save();
-
+        if(action.isFinish==true){
             res.send({
-                code: 1000,
-                message: '请求成功',
-                success: true
-            });
-        } else {
+                code:3003,
+                message:"不可重复点赞",
+                success:false
+            })
+        }
+        if(action.isFinish==false){
+            if (comment) {
+                // 找到需要点赞的二级评论的索引
+                // 使用 $inc 操作符将 likes 属性加1
+                comment.replies[index].likes += 1;
+                // 保存更新后的评论对象
+                await comment.save();
+                await Action.findOneAndUpdate({UID:UID,targetID:comment.replies[index]._id},{isFinish:true})
+                res.send({
+                    code: 1000,
+                    message: '请求成功',
+                    success: true
+                });
+            } else {
+                res.send({
+                    code: 3003,
+                    message: '请求失败',
+                    success: false
+                });
+            }
+        }else{
             res.send({
                 code: 3003,
                 message: '请求失败',
@@ -321,9 +452,51 @@ router.post('/voteTwoLevelComment', async (req, res) => {
     }catch(err){
         console.log("err:",err)
     }
-
-
-
 });
+//取消二级评论点赞
+router.post('/cancelvoteTwoLevelComment', async (req, res) => {
+    try {
+        const UID = req.body.UID;
+        const comment = await Comment.findOne({_id: req.body.item._id});
+        const index = req.body.index;
+        const action = await Action.findOne({UID:UID,targetID:comment.replies[index]._id});
 
+        if(action.isFinish==false){
+            res.send({
+                code:3003,
+                message:"不可重复取消点赞",
+                success:false
+            })
+        }
+        if(action.isFinish==true){
+            if (comment) {
+                // 找到需要点赞的二级评论的索引
+                // 使用 $inc 操作符将 likes 属性加1
+                comment.replies[index].likes -= 1;
+                // 保存更新后的评论对象
+                await comment.save();
+                await Action.findOneAndUpdate({UID:UID,targetID:comment.replies[index]._id},{isFinish:false})
+                res.send({
+                    code: 1000,
+                    message: '请求成功',
+                    success: true
+                });
+            } else {
+                res.send({
+                    code: 3003,
+                    message: '请求失败',
+                    success: false
+                });
+            }
+        }else{
+            res.send({
+                code: 3003,
+                message: '请求失败',
+                success: false
+            });
+        }
+    }catch(err){
+        console.log("err:",err)
+    }
+});
 module.exports = router;

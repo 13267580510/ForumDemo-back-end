@@ -4,6 +4,7 @@ const { Issue } = require('../API/Model/Issue');
 const {User} = require('../API/Model/User');
 const moment = require("moment-timezone");
 const {Comment} = require("../API/Model/Comment");
+const {Action} = require("../API/Model/Action");
 
 //新增问题
 router.post('/addIssue',async (req,res)=>{
@@ -20,8 +21,13 @@ router.post('/addIssue',async (req,res)=>{
             UID:req.body.UID,
             contactWay:req.body.contactWay,
             contactNumber:req.body.contactNumber
-        }).then(async  (success)=>{
+        }).then(async  (issue)=>{
             console.log('新增问题成功');
+            console.log("开始标记是否点赞");
+            await  Action.create({
+                UID:req.body.UID,
+                targetID:issue._id
+            })
             res.send({
                 code:1000,
                 data:{
@@ -262,14 +268,16 @@ router.post('/updateIssue',async (req,res)=>{
 //点赞此问题
 router.post('/vote',async (req,res)=>{
     try {
-
-        console.log('接收到点赞问题请求:',req.body.id);
-        const issue = await Issue.findOne({_id:req.body.id});
+        const UID = req.body.UID
+        const _id = req.body.id
+        const issue = await Issue.findOne({_id:_id});
         if(issue){
             console.log('找到Issue:',issue);
             issue.voteCount = issue.voteCount+1;
             console.log('voteCount:',issue.voteCount);
             const result = await issue.save();
+            //标记用户已经点赞
+            const action = await Action.findOneAndUpdate({UID:UID,targetID:_id},{isFinish:true})
             res.send({
                 code:1000,
                 message:"请求成功",
@@ -280,6 +288,48 @@ router.post('/vote',async (req,res)=>{
             res.send({
                 code:3003,
                 message:"此问题已经注销",
+                success:false
+            })
+        }
+    }catch(err){
+        console.log("err:",err)
+    }
+});
+//取消点赞
+router.post('/cancelVote',async (req,res)=>{
+    try {
+        //先判断用户是否已经点赞，再去处理取消点赞需求
+        const UID = req.body.UID;
+        const _id = req.body._id;
+        const action  = await  Action.findOne({UID:UID,targetID:_id})
+        if(action.isFinish){
+            console.log('接收到取消点赞问题请求:',req.body.id);
+            const issue = await Issue.findOne({_id:_id});
+            if(issue){
+                console.log('找到Issue:',issue);
+                issue.voteCount = issue.voteCount-1;
+                console.log('voteCount:',issue.voteCount);
+                action.isFinish = false;
+                await action.save();
+                const result = await issue.save();
+                res.send({
+                    code:1000,
+                    message:"请求成功",
+                    success:true
+                })
+            }else{
+                console.log("未找到此问题:",issue);
+                res.send({
+                    code:3003,
+                    message:"此问题已经注销",
+                    success:false
+                })
+            }
+        }else{
+            console.log("用户未点赞，无法执行取消点赞:",action.isFinish);
+            res.send({
+                code:3003,
+                message:"用户未点赞，无法执行取消点赞",
                 success:false
             })
         }

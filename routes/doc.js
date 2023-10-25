@@ -3,6 +3,7 @@ var router = express.Router();
 const {Doc} = require('../API/Model/Doc');
 const {Issue} = require("../API/Model/Issue");
 const {Favorite} = require("../API/Model/Favorite");
+const {Action} = require('../API/Model/Action');
 //新增文档
 router.post('/createDoc',async (req,res)=>{
     try {
@@ -119,20 +120,34 @@ router.post('/findOne',async  (req,res)=>{
     //分为模糊查找和具体查找
     //用id为具体查找，关键字为模糊查找
     if(req.body._id && !req.body.keywords){
-        console.log("req.body._id:",req.body._id,"req.body.keywords:",req.body.keywords)
+        const UID = req.body.UID;
         const _id = req.body._id;
-        const result = await  Doc.findOne({_id:_id});
+        const result = await  Doc.findOne({_id:_id}).lean();
         if(result){
+            //找到此文档，查看用户有无点赞
+            const action = await Action.findOne({UID,targetID:_id});
+            console.log("action:",action);
+            if(action) {
+                //用户有关于这个文档的记录
+                result.isFinish = action.isFinish;
+
+            }else{
+                //用户没有关于这个文档的记录，先创建关系，再赋false
+                await Action.create({UID,targetID:_id});
+                result.isFinish = false;
+            }
+            console.log("result:",result);
             res.send({
                 code:1000,
                 message:"请求成功",
                 success:true,
                 data:result
             })
+
         }else{
             res.send({
                 code:3003,
-                message:"请求失败",
+                message:"没有此文档",
                 success:false,
             })
         }
@@ -266,22 +281,91 @@ router.get('/getAll',async (req,res)=>{
 //点赞
 router.post('/vote',async (req,res)=>{
     try {
-        const doc = await Doc.findOne({_id:req.body._id});
+        const UID = req.body.UID;
+        const _id = req.body._id;
+        const doc = await Doc.findOne({_id});
+            if(doc){
+                //查看用户是否重复点赞
+                const action = await Action.findOne({UID,targetID:_id});
+                console.log("action:",action);
+                if(action==''){
+                    res.status(200).send({
+                        code:3003,
+                        message:"请求失败",
+                        success:false
+                    })
+                }else if(action.isFinish==false){
+                        action.isFinish=true;
+                        await action.save();
+                        doc.likes = doc.likes+1;
+                        console.log('likes:', doc.likes );
+                       await doc.save();
+                        res.send({
+                            code:1000,
+                            message:"请求成功",
+                            success:true
+                        })
+                }else{
+                    console.log("用户已经点赞,不可以重复点赞");
+                    res.send({
+                        code:1000,
+                        message:"不可以重复点赞",
+                        success:false
+                    })
+                }
+            }else{
+                console.log("未找到此问题:",issue);
+                res.status(404).send({
+                    code:3003,
+                    message:"此问题已经注销",
+                    success:false
+                })
+            }
+    }catch (err){
+        console.log(err);
+    }
+
+
+})
+router.post('/Unvote',async (req,res)=>{
+    try {
+        const UID = req.body.UID;
+        const _id = req.body._id;
+        const doc = await Doc.findOne({_id});
         if(doc){
-            console.log('找到doc:',doc);
-            doc.likes = doc.likes+1;
-            console.log('likes:', doc.likes );
-            const result = await doc.save();
-            res.status(200).send({
-                code:1000,
-                message:"请求成功",
-                success:true
-            })
+            //查看用户是否重复点赞
+            const action = await Action.findOne({UID,targetID:_id});
+            console.log("action:",action);
+            if(action==''){
+                res.status(200).send({
+                    code:3003,
+                    message:"请求失败",
+                    success:false
+                })
+            }else if(action.isFinish==true){
+                action.isFinish=false;
+                await action.save();
+                doc.likes = doc.likes-1;
+                console.log('likes:', doc.likes );
+                await doc.save();
+                res.send({
+                    code:1000,
+                    message:"请求成功",
+                    success:true
+                })
+            }else{
+                console.log("用户已经点赞,不可以重复点赞");
+                res.send({
+                    code:1000,
+                    message:"不可以重复点赞",
+                    success:false
+                })
+            }
         }else{
-            console.log("未找到此问题:",issue);
+            console.log("未找到此文档:",doc);
             res.status(404).send({
                 code:3003,
-                message:"此问题已经注销",
+                message:"此文档已经注销",
                 success:false
             })
         }
@@ -291,6 +375,9 @@ router.post('/vote',async (req,res)=>{
 
 
 })
+
+
+
 //收藏文档
 router.post('/collecte',async  (req,res)=>{
     try {
